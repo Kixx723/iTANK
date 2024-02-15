@@ -112,16 +112,8 @@ const addLinkToEpanet = (startNodeId: string, endNodeId: string, linkType: strin
   console.log(`Link added. Total links: ${linkCount}`);
 };
 
-  // const addLink = (fromNode: Node, toNode: Node, type: string) => {
-  //   const newLink: Link = {
-  //     id: links.length + 1,
-  //     positions: [fromNode.position, toNode.position],
-  //     name: `Link${links.length + 1}`,
-  //     type, 
-  //   };
-  //   setLinks(prevLinks => [...prevLinks, newLink]);
-  // };
-  
+ 
+
   const MapEvents = () => {
     useMapEvents({
       click(e) {
@@ -189,28 +181,13 @@ const addLinkToEpanet = (startNodeId: string, endNodeId: string, linkType: strin
     }
   };
 
-  // const deleteNode = (id: number, event: React.MouseEvent) => {
-  //   event.stopPropagation();
-
-  //   // Remove the node from the EPANET model
-  //   setNodes(nodes.filter(node => node.id !== id));
-  // };
-
-  // const deleteLink = (id: number, event: React.MouseEvent) => {
-  //  setLinks(links.filter(link => link.id !== id));
-  // }
-
+  
   const iconUrls: { [key in MapNodeType]: string } = {
-    tank: "https://cdn.iconscout.com/icon/premium/png-512-thumb/water-tank-2112603-1778951.png",
+    tank: "https://cdn-icons-png.flaticon.com/512/8018/8018594.png",
     reservoir: "https://cdn.iconscout.com/icon/premium/png-256-thumb/dug-well-973551.png", // Replace with actual URL
     junction: "https://upload.wikimedia.org/wikipedia/commons/b/b7/Purple_Circle.png?20180518181543", // Replace with actual URL
   };
   
-  // const customIcon = new Icon({
-  //   iconUrl: "https://cdn.iconscout.com/icon/premium/png-512-thumb/water-tank-2112603-1778951.png?f=webp&w=256",
-  //   iconSize: [38,38],
-  // })
-
   // Function to get a custom icon based on the node type
 const getCustomIcon = (type: MapNodeType) => {
   return new Icon({
@@ -218,11 +195,6 @@ const getCustomIcon = (type: MapNodeType) => {
     iconSize: [25, 25],
   });
 };
-// // Function to render polylines
-//  const generatePolylines = () => {
-//   let paths: LatLngExpression[] = nodes.map(node => node.position);
-//   return <Polyline positions={paths} color="blue" />;
-// };
 
   return (
     <>
@@ -241,32 +213,15 @@ const getCustomIcon = (type: MapNodeType) => {
       <MapEvents />
       {nodes.map((node) => (
         <Marker icon={getCustomIcon(node.type as MapNodeType)}  key={node.id} position={node.position} eventHandlers={{ click: () => handleNodeClick(node) }}>
-          {/* <Popup>type: {node.name} <br/>id: {node.id}<br/> 
-          <button onClick={(e) => {
-            e.stopPropagation();
-            deleteNode(node.id, e)
-          }} style={{ marginTop: '10px' }}>Delete</button>
-          </Popup> */}
         </Marker>
       ))}
       {links.map((link) => (
         <Polyline key={link.id} positions={link.positions} weight={5} color="blue">
-          {/* <Popup>type {link.name} {link.type} <br />
-          <button onClick={(e) => {
-            e.stopPropagation();
-            deleteLink(link.id, e)
-          }} style={{ marginTop: '10px' }}>Delete</button>
-          </Popup> */}
         </Polyline>
       ))}
-      {/* Render the current polyline being drawn */}
-      {/* {currentPolylinePoints.length > 0 && (
-        <Polyline positions={currentPolylinePoints} color="blue" weight={5}/>
-      )} */}
       {currentPolylinePoints.length > 0 && (
         <Polyline positions={currentPolylinePoints} color="blue" weight={5} />
       )}
-      {/* {generatePolylines()}  */}
       
     </MapContainer>
     </>
