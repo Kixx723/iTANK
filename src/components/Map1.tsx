@@ -3,40 +3,13 @@ import { MapContainer, TileLayer, Marker, Polyline, useMapEvents} from 'react-le
 import 'leaflet/dist/leaflet.css';
 import { Icon, LatLngExpression} from 'leaflet';
 import SidePanel from './SidePanel';
-import { Project, Workspace, NodeType, NodeProperty, CountType, LinkType, LinkProperty } from "epanet-js";
+import { Project, Workspace, NodeType, CountType, LinkType, LinkProperty } from "epanet-js";
+import { Junction, EpanetNode, Node, Link, PolylinePoint, MapNodeType } from '../interfaces/types'; 
 import axios from 'axios';
-// import { EditControl } from 'react-leaflet-draw';
-// import 'leaflet-draw/dist/leaflet.draw.css'
-
-interface Node {
-    id: number;
-    longitude: number; 
-    latitude: number; 
-    type: string;
-}
-
-interface EpanetNode {
-  id: number,
-  type: string,
-}
-
-interface Link {
-  id: number;
-  positions: { latitude: number; longitude: number; }[];
-  name?: string,
-  type: string,
-}
-
-interface PolylinePoint {
-  latitude: number;
-  longitude: number;
-}
+import JunctionModal from './JunctionModal';
 
 const ws = new Workspace();
 const model = new Project(ws);
-
-type MapNodeType = 'tank' | 'reservoir' | 'junction';
-
 
 const Map1: React.FC = () => {
   const defaultPosition: LatLngExpression = [6.1164, 125.1716]; 
@@ -47,7 +20,35 @@ const Map1: React.FC = () => {
   const [selectedLinkType, setSelectedLinkType] = useState<string>('');
   const [linkStartNode, setLinkStartNode] = useState<Node | null>(null);
   const [currentPolylinePoints, setCurrentPolylinePoints] = useState<PolylinePoint[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [currentJunction, setCurrentJunction] = useState<Junction | null>(null);
 
+  const clickingNode = async (nodeId: number) => {
+    try {
+      const response = await axios.get(`http://localhost:3001/nodes/${nodeId}`);
+      const junction = response.data.junction;
+      setCurrentJunction(junction);
+      setIsModalOpen(true);
+      
+   } catch (error) {
+      console.log('Error fetching nodes:', error);
+   }
+  }
+
+  const updateJunction = async (junctionId: number, updatedData: Partial<Junction>) => {
+    try {
+      await axios.patch(`http://localhost:3001/junctions/${junctionId}`, updatedData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      setIsModalOpen(false); 
+    } catch (error) {
+      console.error('Error updating junction:', error);
+    }
+  };
+
+  
   const addNodeToEpanet = (node: EpanetNode) => {
     const { id, type } = node;
     let nodeType;
@@ -63,8 +64,7 @@ const Map1: React.FC = () => {
         return;
     }
 
-    const nodeIndex = model.addNode(id.toString(), nodeType);
-    console.log(`Node added with index: ${nodeIndex}`);
+    model.addNode(id.toString(), nodeType);
 };
 
 
@@ -258,6 +258,15 @@ const getCustomIcon = (type: MapNodeType) => {
       setSelectedLinkType(linkType);
       setSelectedNodeType('');
     }}/>
+
+    {}
+    <JunctionModal
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      junction={currentJunction}
+      onUpdate={updateJunction}
+    />
+
     <MapContainer center={defaultPosition} zoom={zoomLevel} zoomControl={false} style={{ height: '100vh', width: '100%' }}>
       <TileLayer 
       attribution='Stadia ALdidadeSmoothDark'
@@ -265,7 +274,10 @@ const getCustomIcon = (type: MapNodeType) => {
       />
       <MapEvents />
       {nodes.map((node) => (
-        <Marker icon={getCustomIcon(node.type as MapNodeType)}  key={node.id} position={[node.latitude, node.longitude]} eventHandlers={{ click: () => handleNodeClick(node) }}>
+        <Marker icon={getCustomIcon(node.type as MapNodeType)}  key={node.id} position={[node.latitude, node.longitude]} 
+        // eventHandlers={{ click: () => handleNodeClick(node) }}
+        eventHandlers={{ click: () => clickingNode(node.id)}}
+        >
         </Marker>
       ))}
       {links.map((link) => (

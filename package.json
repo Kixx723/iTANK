@@ -20,7 +20,8 @@
     "react-konva": "^18.2.10",
     "react-leaflet": "^4.2.1",
     "react-leaflet-draw": "^0.20.4",
-    "react-map-gl": "^7.1.7"
+    "react-map-gl": "^7.1.7",
+    "react-modal": "^3.16.1"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.8",

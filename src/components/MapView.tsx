@@ -4,36 +4,15 @@ import 'leaflet/dist/leaflet.css';
 import { Icon, LatLngExpression} from 'leaflet';
 import SidePanel from './SidePanel';
 import { Project, Workspace, NodeType, NodeProperty, CountType, LinkType, LinkProperty } from "epanet-js";
+import {  Node, Link, PolylinePoint, MapNodeType } from '../interfaces/types'; 
 import axios from 'axios';
 // import { EditControl } from 'react-leaflet-draw';
 // import 'leaflet-draw/dist/leaflet.draw.css'
-
-interface Node {
-    id: number;
-    longitude: number; 
-    latitude: number; 
-    type: string;
-}
-
-interface Link {
-  id: number;
-  positions: { latitude: number; longitude: number; }[];
-  name?: string,
-  type: string,
-}
-
-interface PolylinePoint {
-  latitude: number;
-  longitude: number;
-}
 
 const ws = new Workspace();
 const model = new Project(ws);
 
 model.init("report.rpt", "out.bin", 0, 0);
-
-type MapNodeType = 'tank' | 'reservoir' | 'junction';
-
 
 const Map1: React.FC = () => {
   const defaultPosition: LatLngExpression = [6.1164, 125.1716]; 
