@@ -1,24 +1,30 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Popup, useMapEvents, FeatureGroup } from 'react-leaflet';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, useMapEvents} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Icon, LatLngExpression, latLng} from 'leaflet';
+import { Icon, LatLngExpression} from 'leaflet';
 import SidePanel from './SidePanel';
-import { Project, Workspace, NodeType, NodeProperty, CountType } from "epanet-js";
+import { Project, Workspace, NodeType, NodeProperty, CountType, LinkType, LinkProperty } from "epanet-js";
+import axios from 'axios';
 // import { EditControl } from 'react-leaflet-draw';
 // import 'leaflet-draw/dist/leaflet.draw.css'
 
 interface Node {
     id: number;
-    position: LatLngExpression;
-    name?: string;
+    longitude: number; 
+    latitude: number; 
     type: string;
 }
 
 interface Link {
   id: number;
-  positions: LatLngExpression[];
+  positions: { latitude: number; longitude: number; }[];
   name?: string,
   type: string,
+}
+
+interface PolylinePoint {
+  latitude: number;
+  longitude: number;
 }
 
 const ws = new Workspace();
@@ -27,130 +33,196 @@ const model = new Project(ws);
 model.init("report.rpt", "out.bin", 0, 0);
 
 type MapNodeType = 'tank' | 'reservoir' | 'junction';
-  
-const MapView: React.FC = () => {
-  const defaultPosition: LatLngExpression = [6.1164, 125.1716]; // Change to your desired coordinates
+
+
+const Map1: React.FC = () => {
+  const defaultPosition: LatLngExpression = [6.1164, 125.1716]; 
   const zoomLevel: number = 13;
   const [nodes, setNodes] = useState<Node[]>([]);
   const [selectedNodeType, setSelectedNodeType] = useState<string>('');
   const [links, setLinks] = useState<Link[]>([]);
   const [selectedLinkType, setSelectedLinkType] = useState<string>('');
-  const [currentPolylinePoints, setCurrentPolylinePoints] = useState<LatLngExpression[]>([]);
-  
-  const addNode = (latlng: L.LatLng, type: string) => { 
-    const newNode = {
-      id: nodes.length + 1,
-      position: latlng,
-      name: `Node${nodes.length + 1}`,
-      type: type, // 'tank', 'reservoir', or 'junction
-    };
-    setNodes(prevNodes => [...prevNodes, newNode]);
-    if (type === 'junction' || type === 'tank' || type === 'reservoir') {
-      addNodeToEpanet(type);
+  const [linkStartNode, setLinkStartNode] = useState<Node | null>(null);
+  const [currentPolylinePoints, setCurrentPolylinePoints] = useState<PolylinePoint[]>([]);
+
+
+  const fetchNode = async () => {
+    try {
+       const response = await axios.get(`http://localhost:3001/nodes`);
+       const nodeData = response.data;
+       console.log(nodeData)
+       setNodes(nodeData);
+    } catch (error) {
+       console.log('Error fetching nodes:', error);
     }
+  } 
+
+    useEffect(() => {    
+      fetchNode();
+    },[])
+  
+  
+  const addNode = async (latlng: L.LatLng, type: string) => { 
+    try {
+      await axios.post(`http://localhost:3001/nodes`, {
+          type: type,
+          longitude: latlng.lng,
+          latitude: latlng.lat,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+    } catch (error) {
+      console.log(error)
+    }
+    fetchNode();
+    // setNodes(prevNodes => [...prevNodes, newNode]);
+    // if (type === 'junction' || type === 'tank' || type === 'reservoir') {
+    //   addNodeToEpanet(type);
+    // }
   };
   
-  const addNodeToEpanet = (type: string) => {
-    if (type === 'junction' || type === 'tank' || type === 'reservoir') {
+//   const addNodeToEpanet = (type: string) => {
+//     if (type === 'junction' || type === 'tank' || type === 'reservoir') {
   
-        const nodeName = nodes.length + 1;
-        let nodeType: number;
-        let nodeIndex: number;
-        if (type === 'junction') {
-            nodeType = NodeType.Junction;
-            nodeIndex = model.addNode(nodeName.toString(), nodeType);
-            const nodeData = model.getNodeId(nodeIndex)
-            console.log(nodeData)
-        } 
-        else if (type === 'reservoir') {
-            nodeType = NodeType.Reservoir;
-            nodeIndex = model.addNode(nodeName.toString(), nodeType);
-            // Set additional data as needed
-            const nodeData = model.getNodeId(nodeIndex)
-            console.log(nodeData)
-        }
-        else if (type === 'tank') {
-            nodeType = NodeType.Tank;
-            nodeIndex = model.addNode(nodeName.toString(), nodeType);
-            const nodeData = model.getNodeId(nodeIndex)
-            console.log(nodeData)
-        }
-        // Optionally, you can also store the node index or other data for future reference or database storage
-        // const nodeData = model.getNodeId(nodes.length + 1)
-        // console.log(nodeData)
-        const nodeCount = model.getCount(CountType.NodeCount);
-        console.log(nodeCount);
-        // console.log(nodeData);
+//         const nodeId = nodes.length + 1;
+//         let nodeType: number;
+//         let nodeIndex: number;
+//         if (type === 'junction') {
+//             nodeType = NodeType.Junction;
+//             nodeIndex = model.addNode(nodeId.toString(), nodeType);
+//             const nodeData = model.getNodeId(nodeIndex)
+//             console.log(nodeData)
+//         }   
+//         else if (type === 'reservoir') {
+//             nodeType = NodeType.Reservoir;
+//             nodeIndex = model.addNode(nodeId.toString(), nodeType);
+//             // Set additional data as needed
+//             const nodeData = model.getNodeId(nodeIndex)
+//             console.log(nodeData)
+//         }
+//         else if (type === 'tank') {
+//             nodeType = NodeType.Tank;
+//             nodeIndex = model.addNode(nodeId.toString(), nodeType);
+//             const nodeData = model.getNodeId(nodeIndex)
+//             console.log(nodeData)
+//         }
+//         // Optionally, you can also store the node index or other data for future reference or database storage
+//         // const nodeData = model.getNodeId(nodes.length + 1)
+//         // console.log(nodeData)
+//         // const nodeCount = model.getCount(CountType.NodeCount);
+//         // console.log(nodeCount);
+//         // console.log(nodeData);
 
-    }
+//     }
+// };
+
+const addLinkToEpanet = (startNodeId: string, endNodeId: string, linkType: string) => {
+  let linkIndex: number;
+
+  const linkId = links.length + 1
+
+  if (linkType === 'pipe') {
+    // Assuming linkParams contains necessary parameters for a pipe, like length, diameter, and roughness
+    linkIndex = model.addLink(linkId.toString(), LinkType.Pipe, startNodeId, endNodeId);
+    model.setLinkValue(linkIndex, LinkProperty.Length, 100);
+    
+    console.log(model.getLinkValue(linkIndex, LinkProperty.Length))
+  } 
+  else if (linkType === 'pump') {
+    // Assuming linkParams contains necessary parameters for a pipe, like length, diameter, and roughness
+    linkIndex = model.addLink(linkId.toString(), LinkType.Pipe, startNodeId, endNodeId);
+    model.setLinkValue(linkIndex, LinkProperty.Length, 50);
+    
+    console.log(model.getLinkValue(linkIndex, LinkProperty.Length))
+  }
+  // Include conditions for other types of links (pumps, valves) with their specific parameters
+
+  const linkCount = model.getCount(CountType.LinkCount);
+  console.log(`Link added. Total links: ${linkCount}`);
 };
 
-  const addLink = (positions: LatLngExpression[], type: string) => {
-    const newLink: Link = {
-      id: links.length + 1,
-      positions,
-      name: `Link${links.length + 1}`,
-      type, 
-    };
-    setLinks(prevLinks => [...prevLinks, newLink]);
-  };
-  
+ 
+
   const MapEvents = () => {
     useMapEvents({
       click(e) {
-        // if (selectedNodeType) {
-        //   addNode(e.latlng, selectedNodeType);
-        //   // setSelectedNodeType(''); // Reset selection or keep it based on your use case
-        // } // else if (selectedLinkType) {
-        // //   addLink(e.latlng, selectedLinkType);
-        // //   setSelectedLinkType(''); // Reset or keep selection based on your use case
-        // // }
-        // else if (selectedLinkType) {
-        //   setCurrentPolylinePoints((prevPoints) => [...prevPoints, e.latlng]);
-        // }
         if (selectedNodeType) {
           addNode(e.latlng, selectedNodeType);
-        } else if (selectedLinkType && currentPolylinePoints.length === 0) {
-          setCurrentPolylinePoints([e.latlng]); // Start a new polyline
-        } else if (selectedLinkType && currentPolylinePoints.length > 0) {
-          setCurrentPolylinePoints([...currentPolylinePoints, e.latlng]); // Add to existing polyline
+        }
+        if (selectedLinkType) {
+          // If a link type is selected and we have a starting node, we're in 'drawing mode'
+          if (linkStartNode) {
+            // Add the clicked point to the current polyline
+            setCurrentPolylinePoints(currentPoints => [...currentPoints, { latitude: e.latlng.lat, longitude: e.latlng.lng }]);
+          } else {
+            // If we don't have a starting node, set the current node as the starting node
+            const fromNode = {
+              id: nodes.length + 1, // The new node's ID will be the next in the sequence
+              latitude: e.latlng.lat,
+              longitude: e.latlng.lng,
+              name: `Node${nodes.length + 1}`,
+              type: selectedNodeType,
+            };
+            setLinkStartNode(fromNode);
+            setCurrentPolylinePoints(points => [...points, { latitude: fromNode.latitude, longitude: fromNode.longitude }]); // Start the polyline with the new node position
+          }
         }
       },
-      dblclick() {
-        if (selectedLinkType && currentPolylinePoints.length > 0) {
-          addLink(currentPolylinePoints, selectedLinkType);
-          setCurrentPolylinePoints([]);
-          setSelectedLinkType(''); //Uncomment if you want to reset link type after adding
-        
-        }
-      },
+      // ... [Other event handlers remain unchanged] ...
     });
     
     return null;
+  };  
+
+  const finishPolyline = (toNode: Node) => {
+    if (currentPolylinePoints.length > 0) {
+      // Add the final node to the current polyline
+      // 
+
+      const updatedPolylinePoints = [...currentPolylinePoints, { latitude: toNode.latitude, longitude: toNode.longitude }];
+
+      const newLink: Link = {
+        id: links.length + 1,
+        positions: updatedPolylinePoints,
+        name: `Link${links.length + 1}`,
+        type: selectedLinkType, 
+      };
+      setLinks(prevLinks => [...prevLinks, newLink]);
+      
+      if (linkStartNode) {
+        addLinkToEpanet(linkStartNode.id.toString(), toNode.id.toString(), selectedLinkType);
+      }
+
+      // Reset the current polyline
+      setCurrentPolylinePoints([]);
+      setLinkStartNode(null);
+      setSelectedLinkType('');
+    }
+  };
+  
+
+  const handleNodeClick = (node: Node) => {
+    if (selectedLinkType) {
+      if (!linkStartNode) {
+        // Select the start node for the link
+        setLinkStartNode(node);
+        setCurrentPolylinePoints([{ latitude: node.latitude, longitude: node.longitude }]); // Start the polyline with the start node position
+      } else {
+        // Finish the polyline with the current node as the toNode
+        finishPolyline(node);
+      }
+    }
   };
 
-  const deleteNode = (id: number, event: React.MouseEvent) => {
-    event.stopPropagation();
-
-    // Remove the node from the EPANET model
-    setNodes(nodes.filter(node => node.id !== id));
-  };
-
-  const deleteLink = (id: number, event: React.MouseEvent) => {
-   setLinks(links.filter(link => link.id !== id));
-  }
-
+  
   const iconUrls: { [key in MapNodeType]: string } = {
-    tank: "https://cdn.iconscout.com/icon/premium/png-512-thumb/water-tank-2112603-1778951.png",
+    tank: "https://cdn-icons-png.flaticon.com/512/8018/8018594.png",
     reservoir: "https://cdn.iconscout.com/icon/premium/png-256-thumb/dug-well-973551.png", // Replace with actual URL
     junction: "https://upload.wikimedia.org/wikipedia/commons/b/b7/Purple_Circle.png?20180518181543", // Replace with actual URL
   };
   
-  // const customIcon = new Icon({
-  //   iconUrl: "https://cdn.iconscout.com/icon/premium/png-512-thumb/water-tank-2112603-1778951.png?f=webp&w=256",
-  //   iconSize: [38,38],
-  // })
-
   // Function to get a custom icon based on the node type
 const getCustomIcon = (type: MapNodeType) => {
   return new Icon({
@@ -158,11 +230,6 @@ const getCustomIcon = (type: MapNodeType) => {
     iconSize: [25, 25],
   });
 };
-// // Function to render polylines
-//  const generatePolylines = () => {
-//   let paths: LatLngExpression[] = nodes.map(node => node.position);
-//   return <Polyline positions={paths} color="blue" />;
-// };
 
   return (
     <>
@@ -180,33 +247,20 @@ const getCustomIcon = (type: MapNodeType) => {
       />
       <MapEvents />
       {nodes.map((node) => (
-        <Marker icon={getCustomIcon(node.type as MapNodeType)}  key={node.id} position={node.position}>
-          {/* <Popup>type: {node.name} <br/>id: {node.id}<br/> 
-          <button onClick={(e) => {
-            e.stopPropagation();
-            deleteNode(node.id, e)
-          }} style={{ marginTop: '10px' }}>Delete</button>
-          </Popup> */}
+        <Marker icon={getCustomIcon(node.type as MapNodeType)}  key={node.id} position={[node.latitude, node.longitude]} eventHandlers={{ click: () => handleNodeClick(node) }}>
         </Marker>
       ))}
       {links.map((link) => (
-        <Polyline key={link.id} positions={link.positions} weight={5} color="blue">
-          {/* <Popup>type {link.name} {link.type} <br />
-          <button onClick={(e) => {
-            e.stopPropagation();
-            deleteLink(link.id, e)
-          }} style={{ marginTop: '10px' }}>Delete</button>
-          </Popup> */}
+        <Polyline key={link.id} positions={link.positions.map(p => [p.latitude, p.longitude])} weight={5} color="blue">
         </Polyline>
       ))}
-      {/* Render the current polyline being drawn */}
       {currentPolylinePoints.length > 0 && (
-        <Polyline positions={currentPolylinePoints} color="blue" weight={5}/>
+        <Polyline positions={currentPolylinePoints.map(p => [p.latitude, p.longitude])} color="blue" weight={5} />
       )}
-      {/* {generatePolylines()}  */}
+      
     </MapContainer>
     </>
   );
 };
 
-export default MapView; 
+export default Map1; 
